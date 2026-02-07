@@ -666,7 +666,9 @@
       .avatar-glow { animation: none; border-radius: 50%; opacity: 0.3; }
       .aurora::before, .aurora::after { animation: none; }
       .cursor-glow { display: none; }
-      #loader { display: none; }
+      #loader { transition-duration: 0.3s !important; }
+      .loader-letter { animation: none !important; background-size: 100% 100% !important; }
+      .loader-name { animation: none !important; opacity: 1 !important; }
       .link-card, .social-icon, .contact-btn {
         opacity: 1 !important;
         transform: none !important;
