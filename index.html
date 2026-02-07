@@ -621,15 +621,17 @@
     /* ========== CURSOR GLOW ========== */
     .cursor-glow {
       position: fixed;
+      left: 0;
+      top: 0;
       width: 220px;
       height: 220px;
       border-radius: 50%;
       pointer-events: none;
       z-index: 9998;
-      transform: translate(-50%, -50%);
       background: radial-gradient(circle, rgba(74, 158, 255, 0.08) 0%, rgba(139, 92, 246, 0.04) 40%, transparent 70%);
-      transition: left 0.15s var(--ease-gentle), top 0.15s var(--ease-gentle), opacity 0.3s;
       opacity: 0;
+      transition: opacity 0.3s;
+      will-change: transform;
     }
 
     .cursor-glow.active {
@@ -1162,16 +1164,31 @@
       glow.className = 'cursor-glow';
       document.body.appendChild(glow);
 
+      var glowX = 0, glowY = 0, targetX = 0, targetY = 0, glowActive = false;
+
       document.addEventListener('mousemove', function (e) {
-        glow.style.left = e.clientX + 'px';
-        glow.style.top = e.clientY + 'px';
-        if (!glow.classList.contains('active')) {
+        targetX = e.clientX;
+        targetY = e.clientY;
+        if (!glowActive) {
+          glowActive = true;
+          glowX = targetX;
+          glowY = targetY;
           glow.classList.add('active');
         }
       });
       document.addEventListener('mouseleave', function () {
+        glowActive = false;
         glow.classList.remove('active');
       });
+
+      (function animateGlow() {
+        if (glowActive) {
+          glowX += (targetX - glowX) * 0.15;
+          glowY += (targetY - glowY) * 0.15;
+          glow.style.transform = 'translate(' + (glowX - 110) + 'px, ' + (glowY - 110) + 'px)';
+        }
+        requestAnimationFrame(animateGlow);
+      })();
     })();
   </script>
 </body>
