@@ -106,12 +106,14 @@
       100% { transform: translate(-50%, -60%) scale(1); opacity: 0.8; }
     }
 
-    /* Letters container */
+    /* Letters container — also carries the gradient shift so chars don't fight two animations */
     .loader-letters {
       display: flex;
       gap: 0.05em;
       position: relative;
       z-index: 1;
+      -webkit-animation: gradientShift 3s ease 1.2s infinite;
+      animation: gradientShift 3s ease 1.2s infinite;
     }
 
     /* Each letter animates in separately */
@@ -125,17 +127,22 @@
       color: transparent;
       display: inline-block;
       opacity: 0;
-      transform: translateY(40px) scale(0.5);
-      filter: blur(10px);
-      animation:
-        charReveal 0.8s cubic-bezier(0.16, 1, 0.3, 1) calc(var(--i) * 0.15s + 0.3s) forwards,
-        gradientShift 3s ease infinite calc(var(--i) * 0.15s + 1.1s);
+      transform: translateY(40px) scale(0.6);
+      will-change: transform, opacity;
+      -webkit-transform: translateY(40px) scale(0.6);
+      -webkit-animation: charReveal 0.85s cubic-bezier(0.16, 1, 0.3, 1) calc(var(--i) * 0.18s + 0.3s) both;
+      animation: charReveal 0.85s cubic-bezier(0.16, 1, 0.3, 1) calc(var(--i) * 0.18s + 0.3s) both;
       letter-spacing: -0.02em;
     }
 
     @keyframes charReveal {
-      0%   { opacity: 0; transform: translateY(40px) scale(0.5); filter: blur(10px); }
-      100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+      0%   { opacity: 0; transform: translateY(40px) scale(0.6); -webkit-transform: translateY(40px) scale(0.6); }
+      100% { opacity: 1; transform: translateY(0) scale(1);      -webkit-transform: translateY(0) scale(1); }
+    }
+
+    @-webkit-keyframes charReveal {
+      0%   { opacity: 0; -webkit-transform: translateY(40px) scale(0.6); }
+      100% { opacity: 1; -webkit-transform: translateY(0) scale(1); }
     }
 
     /* Expanding line divider */
