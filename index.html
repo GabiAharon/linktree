@@ -1171,11 +1171,14 @@
       var canvas = document.getElementById('particleCanvas');
       var ctx = canvas.getContext('2d');
       var particles = [];
-      var mouse = { x: -1000, y: -1000 };
+      var mouse = { x: -9999, y: -9999 };
+      var userMouse = { x: -9999, y: -9999 }; // real user input
       var rafId;
-      var PARTICLE_COUNT = 80;
-      var CONNECTION_DIST = 140;
-      var MOUSE_RADIUS = 160;
+      var PARTICLE_COUNT = 90;
+      var CONNECTION_DIST = 145;
+      var MOUSE_RADIUS = 180;
+      var isTouchOnly = !window.matchMedia('(pointer:fine)').matches;
+      var ghostAngle = 0;
 
       function resize() {
         canvas.width = window.innerWidth;
@@ -1184,25 +1187,25 @@
       resize();
       window.addEventListener('resize', resize);
 
-      // Track mouse
+      // Track real mouse
       document.addEventListener('mousemove', function (e) {
-        mouse.x = e.clientX;
-        mouse.y = e.clientY;
+        userMouse.x = e.clientX;
+        userMouse.y = e.clientY;
       });
       document.addEventListener('mouseleave', function () {
-        mouse.x = -1000;
-        mouse.y = -1000;
+        userMouse.x = -9999;
+        userMouse.y = -9999;
       });
       // Touch support
       document.addEventListener('touchmove', function (e) {
         if (e.touches[0]) {
-          mouse.x = e.touches[0].clientX;
-          mouse.y = e.touches[0].clientY;
+          userMouse.x = e.touches[0].clientX;
+          userMouse.y = e.touches[0].clientY;
         }
       }, { passive: true });
       document.addEventListener('touchend', function () {
-        mouse.x = -1000;
-        mouse.y = -1000;
+        userMouse.x = -9999;
+        userMouse.y = -9999;
       });
 
       // Create particles
@@ -1210,8 +1213,8 @@
         return {
           x: Math.random() * canvas.width,
           y: Math.random() * canvas.height,
-          vx: (Math.random() - 0.5) * 0.4,
-          vy: (Math.random() - 0.5) * 0.4,
+          vx: (Math.random() - 0.5) * 0.5,
+          vy: (Math.random() - 0.5) * 0.5,
           radius: 1 + Math.random() * 1.5,
           opacity: 0.15 + Math.random() * 0.25
         };
@@ -1224,22 +1227,46 @@
       function animateParticles() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+        // Ghost cursor: lemniscate (∞) path — always active on touch,
+        // blends in on desktop when real mouse is absent
+        ghostAngle += 0.007;
+        var scale = Math.min(canvas.width, canvas.height);
+        var ghostX = canvas.width  * 0.5 + Math.cos(ghostAngle)           * scale * 0.38;
+        var ghostY = canvas.height * 0.5 + Math.sin(ghostAngle * 2) * 0.5 * scale * 0.28;
+
+        // Use real mouse when available, otherwise ghost
+        var hasRealMouse = userMouse.x > -9000;
+        mouse.x = hasRealMouse ? userMouse.x : ghostX;
+        mouse.y = hasRealMouse ? userMouse.y : ghostY;
+
+        // Time for wave field
+        var t = Date.now() * 0.001;
+
         for (var i = 0; i < particles.length; i++) {
           var p = particles[i];
 
-          // Mouse force field
+          // ── Autonomous wave / flow field (always on) ──
+          // Each particle gets a gentle sinusoidal nudge based on position + time
+          p.vx += Math.sin(t * 0.6 + p.y * 0.009) * 0.0025;
+          p.vy += Math.cos(t * 0.5 + p.x * 0.009) * 0.0025;
+
+          // ── Mouse / ghost cursor force field ──
           var dx = mouse.x - p.x;
           var dy = mouse.y - p.y;
           var dist = Math.sqrt(dx * dx + dy * dy);
           if (dist < MOUSE_RADIUS && dist > 0) {
-            var force = (MOUSE_RADIUS - dist) / MOUSE_RADIUS * 0.015;
+            var force = (MOUSE_RADIUS - dist) / MOUSE_RADIUS * 0.016;
             p.vx += (dx / dist) * force;
             p.vy += (dy / dist) * force;
           }
 
-          // Damping
-          p.vx *= 0.995;
-          p.vy *= 0.995;
+          // Speed cap so nothing flies off screen
+          var speed = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
+          if (speed > 2.2) { p.vx = p.vx / speed * 2.2; p.vy = p.vy / speed * 2.2; }
+
+          // Softer damping — keeps momentum alive
+          p.vx *= 0.997;
+          p.vy *= 0.997;
 
           p.x += p.vx;
           p.y += p.vy;
@@ -1263,7 +1290,7 @@
             var ddy = p.y - p2.y;
             var d = Math.sqrt(ddx * ddx + ddy * ddy);
             if (d < CONNECTION_DIST) {
-              var alpha = (1 - d / CONNECTION_DIST) * 0.12;
+              var alpha = (1 - d / CONNECTION_DIST) * 0.13;
               ctx.beginPath();
               ctx.moveTo(p.x, p.y);
               ctx.lineTo(p2.x, p2.y);
