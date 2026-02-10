@@ -106,17 +106,15 @@
       100% { transform: translate(-50%, -60%) scale(1); opacity: 0.8; }
     }
 
-    /* Letters container — also carries the gradient shift so chars don't fight two animations */
+    /* Letters container */
     .loader-letters {
       display: flex;
       gap: 0.05em;
       position: relative;
       z-index: 1;
-      -webkit-animation: gradientShift 3s ease 1.2s infinite;
-      animation: gradientShift 3s ease 1.2s infinite;
     }
 
-    /* Each letter animates in separately */
+    /* Each letter — JS drives the animation, CSS just styles */
     .loader-char {
       font-size: clamp(5rem, 15vw, 10rem);
       font-weight: 800;
@@ -127,58 +125,35 @@
       color: transparent;
       display: inline-block;
       opacity: 0;
-      transform: translateY(40px) scale(0.6);
       will-change: transform, opacity;
-      -webkit-transform: translateY(40px) scale(0.6);
-      -webkit-animation: charReveal 0.85s cubic-bezier(0.16, 1, 0.3, 1) calc(var(--i) * 0.18s + 0.3s) both;
-      animation: charReveal 0.85s cubic-bezier(0.16, 1, 0.3, 1) calc(var(--i) * 0.18s + 0.3s) both;
       letter-spacing: -0.02em;
     }
 
-    @keyframes charReveal {
-      0%   { opacity: 0; transform: translateY(40px) scale(0.6); -webkit-transform: translateY(40px) scale(0.6); }
-      100% { opacity: 1; transform: translateY(0) scale(1);      -webkit-transform: translateY(0) scale(1); }
-    }
-
-    @-webkit-keyframes charReveal {
-      0%   { opacity: 0; -webkit-transform: translateY(40px) scale(0.6); }
-      100% { opacity: 1; -webkit-transform: translateY(0) scale(1); }
-    }
-
-    /* Expanding line divider */
+    /* Expanding line divider — JS animates width */
     .loader-line {
       width: 0;
       height: 1px;
       background: linear-gradient(90deg, transparent, var(--blue), var(--purple), transparent);
       margin: 1rem 0;
-      animation: lineExpand 0.8s var(--ease-smooth) 0.9s forwards;
+      opacity: 0;
     }
 
-    @keyframes lineExpand {
-      0%   { width: 0; opacity: 0; }
-      100% { width: clamp(180px, 50vw, 300px); opacity: 1; }
-    }
-
-    /* Name */
+    /* Name — JS animates */
     .loader-name {
       font-size: clamp(0.85rem, 2.5vw, 1.1rem);
       font-weight: 600;
       color: var(--text-secondary);
       opacity: 0;
-      transform: translateY(10px);
-      animation: fadeSlideUp 0.6s var(--ease-smooth) 1.2s forwards;
       letter-spacing: 0.3em;
     }
 
-    /* Hebrew tagline */
+    /* Hebrew tagline — JS animates */
     .loader-tagline {
       font-size: clamp(0.75rem, 2vw, 0.95rem);
       font-weight: 400;
       color: rgba(255, 255, 255, 0.35);
       margin-top: 0.6rem;
       opacity: 0;
-      transform: translateY(10px);
-      animation: fadeSlideUp 0.6s var(--ease-smooth) 1.6s forwards;
       letter-spacing: 0.05em;
       direction: rtl;
     }
@@ -788,11 +763,7 @@
       .avatar-glow { animation: none; border-radius: 50%; opacity: 0.3; }
       .aurora::before, .aurora::after { animation: none; }
       .cursor-glow { display: none; }
-      #loader { transition-duration: 0.3s !important; }
-      .loader-char { animation: none !important; opacity: 1 !important; transform: none !important; filter: none !important; }
-      .loader-flare { animation: none !important; transform: translate(-50%, -60%) scale(1) !important; opacity: 0.8 !important; }
-      .loader-line { animation: none !important; width: 200px !important; opacity: 1 !important; }
-      .loader-name, .loader-tagline { animation: none !important; opacity: 1 !important; transform: none !important; }
+      /* Loader is JS-driven — no CSS overrides needed here */
       .link-card, .social-icon, .contact-btn {
         opacity: 1 !important;
         transform: none !important;
@@ -1012,8 +983,122 @@
     (function () {
       'use strict';
 
+      /* ===== JS ANIMATION ENGINE (bypasses prefers-reduced-motion CSS) ===== */
+      // easeOutExpo: fast start, smooth settle
+      function easeOutExpo(t) {
+        return t === 1 ? 1 : 1 - Math.pow(2, -10 * t);
+      }
+      // easeOutCubic
+      function easeOutCubic(t) {
+        return 1 - Math.pow(1 - t, 3);
+      }
+
+      // Tween a single element's opacity + translateY + scale via rAF
+      function tweenElement(el, from, to, duration, onDone) {
+        var start = null;
+        function frame(ts) {
+          if (!start) start = ts;
+          var raw = Math.min((ts - start) / duration, 1);
+          var t   = easeOutExpo(raw);
+          el.style.opacity   = (from.opacity + (to.opacity - from.opacity) * t).toFixed(3);
+          var ty = from.ty + (to.ty - from.ty) * t;
+          var sc = from.sc + (to.sc - from.sc) * t;
+          el.style.transform = 'translateY(' + ty + 'px) scale(' + sc + ')';
+          if (raw < 1) {
+            requestAnimationFrame(frame);
+          } else {
+            if (onDone) onDone();
+          }
+        }
+        requestAnimationFrame(frame);
+      }
+
+      // Tween width (for the loader line)
+      function tweenWidth(el, fromW, toW, fromOp, toOp, duration) {
+        var start = null;
+        function frame(ts) {
+          if (!start) start = ts;
+          var raw = Math.min((ts - start) / duration, 1);
+          var t   = easeOutCubic(raw);
+          el.style.width   = (fromW + (toW - fromW) * t) + 'px';
+          el.style.opacity = (fromOp + (toOp - fromOp) * t).toFixed(3);
+          if (raw < 1) requestAnimationFrame(frame);
+        }
+        requestAnimationFrame(frame);
+      }
+
+      // Run the full loader sequence
+      function runLoaderAnimation() {
+        var chars   = document.querySelectorAll('.loader-char');
+        var line    = document.querySelector('.loader-line');
+        var name    = document.querySelector('.loader-name');
+        var tagline = document.querySelector('.loader-tagline');
+        var flare   = document.querySelector('.loader-flare');
+
+        // Flare expand (purely opacity via CSS animation still fine here — it's cosmetic)
+        if (flare) {
+          flare.style.transform = 'translate(-50%, -60%) scale(0)';
+          flare.style.opacity   = '0';
+          setTimeout(function () {
+            tweenElement(flare, { opacity: 0, ty: 0, sc: 0 }, { opacity: 0.8, ty: 0, sc: 1 }, 900);
+          }, 150);
+        }
+
+        // G — delay 300ms
+        if (chars[0]) {
+          chars[0].style.transform = 'translateY(38px) scale(0.6)';
+          setTimeout(function () {
+            tweenElement(chars[0], { opacity: 0, ty: 38, sc: 0.6 }, { opacity: 1, ty: 0, sc: 1 }, 750);
+          }, 300);
+        }
+
+        // A — delay 480ms
+        if (chars[1]) {
+          chars[1].style.transform = 'translateY(38px) scale(0.6)';
+          setTimeout(function () {
+            tweenElement(chars[1], { opacity: 0, ty: 38, sc: 0.6 }, { opacity: 1, ty: 0, sc: 1 }, 750);
+          }, 480);
+        }
+
+        // Line — delay 900ms
+        if (line) {
+          var targetW = Math.min(window.innerWidth * 0.5, 300);
+          setTimeout(function () {
+            tweenWidth(line, 0, targetW, 0, 1, 700);
+          }, 900);
+        }
+
+        // Name — delay 1200ms
+        if (name) {
+          name.style.transform = 'translateY(10px)';
+          setTimeout(function () {
+            tweenElement(name, { opacity: 0, ty: 10, sc: 1 }, { opacity: 1, ty: 0, sc: 1 }, 600);
+          }, 1200);
+        }
+
+        // Tagline — delay 1650ms
+        if (tagline) {
+          tagline.style.transform = 'translateY(10px)';
+          setTimeout(function () {
+            tweenElement(tagline, { opacity: 0, ty: 10, sc: 1 }, { opacity: 1, ty: 0, sc: 1 }, 600);
+          }, 1650);
+        }
+
+        // Gradient shift on letters — pure CSS animation still used (background-position only, works fine)
+        setTimeout(function () {
+          [].forEach.call(chars, function(c) {
+            c.style.animation = 'gradientShift 3s ease infinite';
+            c.style.webkitAnimation = 'gradientShift 3s ease infinite';
+          });
+        }, 1100);
+      }
+
       /* ===== LOADING SCREEN ===== */
       const loader = document.getElementById('loader');
+
+      // Start animations immediately on DOM ready
+      runLoaderAnimation();
+
       window.addEventListener('load', function () {
         setTimeout(function () {
           loader.classList.add('hidden');
