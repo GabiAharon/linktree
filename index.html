@@ -511,9 +511,93 @@
       display: flex;
       gap: 0.6rem;
       margin-top: 0.5rem;
+      position: relative;
+      justify-content: center;
+      align-items: center;
+      width: 100%;
+      min-height: 76px;
+      isolation: isolate;
+    }
+
+    .social-launcher {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      transform: translate(-50%, -50%) scale(0.92);
+      display: grid;
+      place-items: center;
+      color: #F6B84F;
+      background:
+        radial-gradient(circle at 30% 24%, rgba(255, 255, 255, 0.28), transparent 62%),
+        linear-gradient(145deg, rgba(246, 184, 79, 0.34), rgba(245, 158, 11, 0.12));
+      border: 1px solid rgba(246, 184, 79, 0.54);
+      box-shadow:
+        0 0 0 0 rgba(246, 184, 79, 0.32),
+        0 14px 38px rgba(245, 158, 11, 0.2);
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0;
+    }
+
+    .social-launcher svg {
+      width: 26px;
+      height: 26px;
+      filter: drop-shadow(0 2px 8px rgba(246, 184, 79, 0.42));
+    }
+
+    .socials.is-launching .social-launcher {
+      animation: launcherPulse 2200ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+
+    .socials.launch-complete .social-launcher {
+      opacity: 0.14;
+      transform: translate(-50%, -50%) scale(0.84);
+      transition: transform 0.5s var(--ease-smooth), opacity 0.5s var(--ease-smooth);
+      animation: launcherIdle 3.8s ease-in-out infinite;
+    }
+
+    @keyframes launcherPulse {
+      0% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.62) rotate(-18deg);
+        box-shadow: 0 0 0 0 rgba(246, 184, 79, 0.46), 0 14px 34px rgba(245, 158, 11, 0.18);
+      }
+      22% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1.12) rotate(5deg);
+      }
+      55% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1.02) rotate(-2deg);
+        box-shadow: 0 0 0 30px rgba(246, 184, 79, 0), 0 18px 52px rgba(245, 158, 11, 0.34);
+      }
+      100% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.82) rotate(0deg);
+        box-shadow: 0 0 0 46px rgba(246, 184, 79, 0), 0 10px 28px rgba(245, 158, 11, 0.1);
+      }
+    }
+
+    @keyframes launcherIdle {
+      0%, 100% { transform: translate(-50%, -50%) scale(0.84); opacity: 0.14; }
+      50%      { transform: translate(-50%, -50%) scale(0.9);  opacity: 0.2; }
     }
 
     .social-icon {
+      --start-x: 0px;
+      --start-y: 0px;
+      --arc-x: 0px;
+      --arc-y: -24px;
+      --overshoot-x: 0px;
+      --overshoot-y: -8px;
+      --spin-start: 0deg;
+      --spin-mid: 0deg;
+      --trail-angle: 0deg;
+      --launch-delay: 0ms;
+      --brand-rgb: 74, 158, 255;
       position: relative;
       width: 46px;
       height: 46px;
@@ -533,14 +617,86 @@
         box-shadow 0.3s;
       color: var(--text-secondary);
       transform-style: preserve-3d;
+      z-index: 1;
       /* entrance */
       opacity: 0;
       transform: translateY(20px) scale(0.8);
     }
 
+    .social-icon[data-brand="instagram"] { --brand-rgb: 225, 48, 108; }
+    .social-icon[data-brand="facebook"]  { --brand-rgb: 24, 119, 242; }
+    .social-icon[data-brand="youtube"]   { --brand-rgb: 255, 0, 0; }
+    .social-icon[data-brand="linkedin"]  { --brand-rgb: 10, 102, 194; }
+    .social-icon[data-brand="tiktok"]    { --brand-rgb: 255, 0, 80; }
+
     .social-icon.visible {
       opacity: 1;
       transform: translateY(0) scale(1);
+    }
+
+    .socials.is-launching .social-icon {
+      pointer-events: none;
+    }
+
+    .socials.is-launching .social-icon.visible.launch-flight {
+      animation: socialIconDock 1700ms cubic-bezier(0.16, 1, 0.3, 1) both;
+      animation-delay: var(--launch-delay);
+    }
+
+    .socials.is-launching .social-icon.visible.launch-flight::before {
+      content: '';
+      position: absolute;
+      width: 2px;
+      height: 38px;
+      left: 50%;
+      top: 50%;
+      border-radius: 999px;
+      background: linear-gradient(180deg, rgba(var(--brand-rgb), 0.58), rgba(var(--brand-rgb), 0));
+      transform-origin: 50% 0%;
+      transform: translate(-50%, -8px) rotate(var(--trail-angle)) scaleY(0.1);
+      opacity: 0;
+      pointer-events: none;
+      animation: socialTrail 1700ms cubic-bezier(0.16, 1, 0.3, 1) both;
+      animation-delay: var(--launch-delay);
+    }
+
+    .social-icon.launched {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      filter: none;
+    }
+
+    @keyframes socialTrail {
+      0%   { opacity: 0; transform: translate(-50%, -8px) rotate(var(--trail-angle)) scaleY(0.1); }
+      18%  { opacity: 0.88; }
+      68%  { opacity: 0.45; transform: translate(-50%, -8px) rotate(var(--trail-angle)) scaleY(1); }
+      100% { opacity: 0; transform: translate(-50%, -8px) rotate(var(--trail-angle)) scaleY(0.4); }
+    }
+
+    @keyframes socialIconDock {
+      0% {
+        opacity: 0;
+        transform: translate(var(--start-x), var(--start-y)) scale(0.18) rotate(var(--spin-start));
+        filter: blur(2px);
+      }
+      20% {
+        opacity: 1;
+        transform: translate(var(--start-x), calc(var(--start-y) - 10px)) scale(0.56) rotate(calc(var(--spin-start) * 0.7));
+        filter: blur(0.8px);
+      }
+      56% {
+        opacity: 1;
+        transform: translate(var(--arc-x), var(--arc-y)) scale(0.92) rotate(var(--spin-mid));
+        filter: blur(0);
+      }
+      82% {
+        opacity: 1;
+        transform: translate(var(--overshoot-x), var(--overshoot-y)) scale(1.08) rotate(3deg);
+      }
+      100% {
+        opacity: 1;
+        transform: translate(0, 0) scale(1) rotate(0deg);
+      }
     }
 
     .social-icon svg {
@@ -773,10 +929,33 @@
       .avatar-glow { animation: none; border-radius: 50%; opacity: 0.3; }
       .aurora::before, .aurora::after { animation: none; }
       .cursor-glow { display: none; }
+      .social-launcher { display: none; }
+      .socials { min-height: auto; }
       /* Loader is JS-driven — no CSS overrides needed here */
-      .link-card, .social-icon, .contact-btn {
+      .link-card, .contact-btn {
         opacity: 1 !important;
         transform: none !important;
+      }
+      .social-icon {
+        opacity: 1;
+        transform: none;
+      }
+
+      /* Allow explicit local preview override: /index.html?fx=1 */
+      html.fx-force .social-launcher {
+        display: grid !important;
+      }
+      html.fx-force .social-icon {
+        opacity: 0;
+        transform: translateY(20px) scale(0.8);
+      }
+      html.fx-force .socials.is-launching .social-launcher {
+        animation-duration: 2200ms !important;
+      }
+      html.fx-force .socials.is-launching .social-icon.visible.launch-flight,
+      html.fx-force .socials.is-launching .social-icon.visible.launch-flight::before {
+        animation-duration: 1700ms !important;
+        animation-iteration-count: 1 !important;
       }
     }
 
@@ -932,7 +1111,15 @@
     </section>
 
     <!-- Social Media -->
-    <section class="socials">
+    <section class="socials" id="socialsRow">
+      <div class="social-launcher" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 10h16"/>
+          <path d="M6.8 10 8 18h8l1.2-8"/>
+          <path d="M9 10V7a3 3 0 0 1 6 0v3"/>
+          <path d="M8 14h8"/>
+        </svg>
+      </div>
       <a href="https://www.instagram.com/gabi_aharon?igsh=b29oMGloNGxlcXB3" target="_blank" rel="noopener noreferrer" class="social-icon" data-brand="instagram" data-sdelay="0" aria-label="Instagram">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
@@ -1152,6 +1339,110 @@
         update();
       }
 
+      var socialLaunchPlayed = false;
+      var forceSocialFx = /(?:\?|&)fx=1(?:&|$)/.test(window.location.search);
+      if (forceSocialFx) {
+        document.documentElement.classList.add('fx-force');
+      }
+
+      // Remotion-style sequencing in "frames", converted to ms for DOM timeline.
+      var SOCIAL_FPS = 60;
+      function framesToMs(frames) {
+        return Math.round((frames / SOCIAL_FPS) * 1000);
+      }
+      var socialTiming = {
+        warmup: framesToMs(20),   // ~333ms
+        stagger: framesToMs(16),  // ~267ms between icons
+        flight: framesToMs(102),  // ~1700ms per icon
+        settle: framesToMs(16)    // ~267ms tail
+      };
+      var socialLaunchTimer = null;
+
+      function runSocialLaunchSequence(forceReplay) {
+        forceReplay = Boolean(forceReplay);
+        if (socialLaunchPlayed && !forceReplay) return;
+        socialLaunchPlayed = true;
+
+        var socialRow = document.getElementById('socialsRow') || document.querySelector('.socials');
+        if (!socialRow || socialRow.classList.contains('is-launching')) return;
+        var icons = socialRow.querySelectorAll('.social-icon');
+        if (!icons.length) return;
+
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches && !forceSocialFx) {
+          icons.forEach(function (icon) {
+            icon.classList.add('visible');
+            icon.classList.add('launched');
+            icon.classList.remove('launch-flight');
+          });
+          socialRow.classList.add('launch-complete');
+          return;
+        }
+
+        if (socialLaunchTimer) {
+          clearTimeout(socialLaunchTimer);
+          socialLaunchTimer = null;
+        }
+
+        socialRow.classList.remove('launch-complete');
+        icons.forEach(function (icon) {
+          icon.classList.remove('visible');
+          icon.classList.remove('launched');
+          icon.classList.remove('launch-flight');
+        });
+
+        socialRow.classList.add('is-launching');
+
+        requestAnimationFrame(function () {
+          var rowRect = socialRow.getBoundingClientRect();
+          var originX = rowRect.left + rowRect.width / 2;
+          var originY = rowRect.top + rowRect.height / 2;
+
+          icons.forEach(function (icon, i) {
+            var rect = icon.getBoundingClientRect();
+            var centerX = rect.left + rect.width / 2;
+            var centerY = rect.top + rect.height / 2;
+            var throwX = centerX - originX;
+            var throwY = centerY - originY;
+
+            var startX = -throwX;
+            var startY = -throwY;
+            var arcX = startX * 0.48 + (Math.random() * 18 - 9);
+            var arcY = startY * 0.62 - 34 - Math.random() * 8;
+            var overshootX = throwX === 0 ? 0 : (throwX > 0 ? 7 : -7);
+            var overshootY = -8 - Math.random() * 4;
+            var delay = socialTiming.warmup + i * socialTiming.stagger;
+
+            var spinStart = ((Math.random() * 140) - 70).toFixed(1) + 'deg';
+            var spinMid = ((Math.random() * 32) - 16).toFixed(1) + 'deg';
+            var trailAngle = (Math.atan2(throwY, throwX) * 180 / Math.PI + 90).toFixed(1) + 'deg';
+
+            icon.style.setProperty('--start-x', startX.toFixed(1) + 'px');
+            icon.style.setProperty('--start-y', startY.toFixed(1) + 'px');
+            icon.style.setProperty('--arc-x', arcX.toFixed(1) + 'px');
+            icon.style.setProperty('--arc-y', arcY.toFixed(1) + 'px');
+            icon.style.setProperty('--overshoot-x', overshootX.toFixed(1) + 'px');
+            icon.style.setProperty('--overshoot-y', overshootY.toFixed(1) + 'px');
+            icon.style.setProperty('--spin-start', spinStart);
+            icon.style.setProperty('--spin-mid', spinMid);
+            icon.style.setProperty('--trail-angle', trailAngle);
+            icon.style.setProperty('--launch-delay', delay + 'ms');
+            icon.classList.add('visible');
+            icon.classList.add('launch-flight');
+          });
+
+          var totalDelay = socialTiming.warmup + (icons.length - 1) * socialTiming.stagger + socialTiming.flight + socialTiming.settle;
+          socialLaunchTimer = setTimeout(function () {
+            icons.forEach(function (icon) {
+              icon.classList.remove('launch-flight');
+              icon.classList.add('launched');
+            });
+            socialRow.classList.remove('is-launching');
+            socialRow.classList.add('launch-complete');
+            socialLaunchTimer = null;
+          }, totalDelay);
+        });
+      }
+
       /* ===== STAGGERED ENTRANCE ANIMATIONS ===== */
       function revealContent() {
         // Text scramble on name
@@ -1182,12 +1473,10 @@
           setTimeout(function () { card.classList.add('visible'); }, delay);
         });
 
-        // Social icons
-        var socials = document.querySelectorAll('.social-icon');
-        socials.forEach(function (icon, i) {
-          var delay = parseInt(icon.getAttribute('data-sdelay') || i) * 80 + 700;
-          setTimeout(function () { icon.classList.add('visible'); }, delay);
-        });
+        // Social icons launch sequence
+        setTimeout(function () {
+          runSocialLaunchSequence();
+        }, 700);
 
         // Contact buttons
         var contacts = document.querySelectorAll('.contact-btn');
@@ -1224,8 +1513,10 @@
 
       /* ===== MAGNETIC CURSOR ON SOCIAL ICONS ===== */
       var socialIcons = document.querySelectorAll('.social-icon');
+      var socialsRow = document.getElementById('socialsRow') || document.querySelector('.socials');
       socialIcons.forEach(function (icon) {
         icon.addEventListener('mousemove', function (e) {
+          if (socialsRow && socialsRow.classList.contains('is-launching')) return;
           var rect = icon.getBoundingClientRect();
           var cx = rect.left + rect.width / 2;
           var cy = rect.top + rect.height / 2;
@@ -1513,6 +1804,22 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function() {
+        var isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        if (isLocalhost) {
+          navigator.serviceWorker.getRegistrations().then(function(registrations) {
+            registrations.forEach(function(registration) {
+              registration.unregister();
+            });
+          });
+          if ('caches' in window) {
+            caches.keys().then(function(keys) {
+              keys.forEach(function(key) {
+                caches.delete(key);
+              });
+            });
+          }
+          return;
+        }
         navigator.serviceWorker.register('/sw.js');
       });
     }
